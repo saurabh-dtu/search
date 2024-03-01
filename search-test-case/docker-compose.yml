@@ -1,0 +1,63 @@
+version: '3.7'
+# Default logging options
+x-logging:
+  &default-logging
+  options:
+    max-size: '50m'
+    max-file: '1'
+  driver: json-file
+
+services:
+  # Elasticsearch
+  ch24-es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.3
+    container_name: ch24-es
+    restart: "no"
+    environment:
+      - TZ=Europe/Berlin
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1G -Xmx1G -Dlog4j2.formatMsgNoLookups=true"
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    expose:
+      - "9200"
+      - "9300"
+    volumes:
+      - ch24-es-data:/usr/share/elasticsearch/data
+#      - ./ssl/elastic-certificates.p12:/usr/share/elasticsearch/config/elastic-certificates.p12
+    logging: *default-logging
+
+  # Kibana
+  ch24-kb:
+    image: docker.elastic.co/kibana/kibana:7.17.3
+    container_name: ch24-kb
+    restart: "no"
+    depends_on:
+      - ch24-es
+    ports:
+      - "5601:5601"
+    expose:
+      - "5601"
+    environment:
+      - TZ=Europe/Berlin
+      - ELASTICSEARCH_URL=http://ch24-es:9200
+      - ELASTICSEARCH_HOSTS=http://ch24-es:9200
+    logging: *default-logging
+
+volumes:
+  ch24-es-data:
+
+networks:
+  default:
+    name: ch24-es-net
